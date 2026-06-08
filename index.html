@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Clock & Countdown Timer</title>
+    <style>
+        /* ===================== RESET & VARIABLES ===================== */
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --glass-bg: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.15);
+            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+            --glass-blur: blur(18px);
+            --accent-blue: #667eea;
+            --accent-purple: #764ba2;
+            --accent-pink: #f093fb;
+            --accent-red: #f5576c;
+            --accent-green: #4ade80;
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.65);
+            --input-bg: rgba(255, 255, 255, 0.06);
+            --input-border: rgba(255, 255, 255, 0.12);
+        }
+
+        /* ===================== BASE STYLES ===================== */
+        html {
+            font-size: 16px;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            background-attachment: fixed;
+            overflow: hidden;
+            position: relative;
+            color: var(--text-primary);
+        }
+
+        /* ===================== ANIMATED BACKGROUND ===================== */
+        .bg-orbs {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .bg-orbs .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.45;
+            animation: orbFloat 25s ease-in-out infinite;
+        }
+
+        .bg-orbs .orb:nth-child(1) {
+            width: 450px;
+            height: 450px;
+            background: radial-gradient(circle, var(--accent-blue), transparent 70%);
+            top: -120px;
+            left: -100px;
+            animation-delay: 0s;
+        }
+
+        .bg-orbs .orb:nth-child(2) {
+            width: 380px;
+            height: 380px;
+            background: radial-gradient(circle, var(--accent-purple), transparent 70%);
+            top: 50%;
+            right: -80px;
+            transform: translateY(-50%);
+            animation-delay: -8s;
+        }
+
+        .bg-orbs .orb:nth-child(3) {
+            width: 320px;
+            height: 320px;
+            background: radial-gradient(circle, var(--accent-pink), transparent 70%);
+            bottom: -80px;
+            left: 25%;
+            animation-delay: -16s;
+        }
+
+        @keyframes orbFloat {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(60px, 60px) scale(1.08); }
+            50% { transform: translate(-40px, 90px) scale(0.95); }
+            75% { transform: translate(70px, -30px) scale(1.04); }
+        }
+
+        /* ===================== MAIN WRAPPER ===================== */
+        .page-wrapper {
+            position: relative;
+            z-index: 1;
+            width: 92%;
+            max-width: 700px;
+            padding: 24px;
+            animation: fadeSlideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(45px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ===================== GLASS CARD ===================== */
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--glass-border);
+            border-radius: 28px;
+            box-shadow: var(--glass-shadow);
+            padding: 44px 40px 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 34px;
+            transition: box-shadow 0.35s ease, transform 0.35s ease;
+        }
+
+        .glass-card:hover {
+            box-shadow: 0 14px 56px rgba(0, 0, 0, 0.32);
+            transform: translateY(-2px);
+        }
+
+        /* ===================== TITLE ===================== */
+        .app-title {
+            font-size: 1.85rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #ffffff 0%, var(--accent-pink) 50%, var(--accent-blue) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 0.5px;
+            text-align: center;
+            line-height: 1.3;
+        }
+
+        /* ===================== DATE DISPLAY ===================== */
+        .date-display {
+            font-size: 1.05rem;
+            color: var(--text-secondary);
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            font-weight: 300;
+        }
+
+        /* ===================== LIVE CLOCK ===================== */
+        .clock-section {
+            text-align: center;
+            width: 100%;
+        }
+
+        .clock-time {
+            font-size: 4.8rem;
+            font-weight: 200;
+            letter-spacing: 5px;
+            color: var(--text-primary);
+            font-variant-numeric: tabular-nums;
+            text-shadow: 0 0 40px rgba(102, 126, 234, 0.35), 0 0 80px rgba(102, 126, 234, 0.1);
+            line-height: 1.1;
+            font-family: 'Courier New', Courier, monospace;
+            user-select: none;
+        }
+
+        .clock-time .colon {
+            animation: colonBlink 1s step-end infinite;
+        }
+
+        @keyframes colonBlink {
+            0%, 100% { opacity: 1; }
+            50%      { opacity: 0.25; }
+        }
+
+        .clock-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            letter-spacing: 3.5px;
+            text-transform: uppercase;
+            font-weight: 500;
+            margin-top: 10px;
+        }
+
+        /* ===================== DIVIDER ===================== */
+        .divider {
+            width: 75%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--glass-border), transparent);
+        }
+
+        /* ===================== SECTION LABELS ===================== */
+        .section-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 4px;
+        }
+
+        /* ===================== COUNTDOWN TIMER ===================== */
+        .countdown-section {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 22px;
+        }
+
+        /* Input Row */
+        .input-row {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: flex-end;
+            width: 100%;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .input-group label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .input-field {
+            padding: 11px 18px;
+            border-radius: 14px;
+            border: 1px solid var(--input-border);
+            background: var(--input-bg);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+            min-width: 210px;
+            backdrop-filter: blur(6px);
+        }
+
+        .input-field:focus {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 24px rgba(102, 126, 234, 0.2);
+            background: rgba(255, 255, 255, 0.09);
+        }
+
+        .input-field::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Firefox date/time input styling fix */
+        .input-field[type="date"]::-webkit-calendar-picker-indicator,
+        .input-field[type="time"]::-webkit-calendar-picker-indicator {
+            filter: invert(0.8);
+            cursor: pointer;
+        }
+
+        /* Countdown Display Boxes */
+        .countdown-grid {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+            width: 100%;
+        }
+
+        .countdown-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            min-width: 82px;
+            padding: 14px 10px 12px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: transform 0.3s ease, background 0.3s ease;
+        }
+
+        .countdown-box:hover {
+            transform: translateY(-3px);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .countdown-value {
+            font-size: 2.3rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            line-height: 1;
+            letter-spacing: 1px;
+            background: linear-gradient(135deg, #ffffff 0%, var(--accent-pink) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .countdown-label {
+            font-size: 0.62rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 2.5px;
+            font-weight: 600;
+        }
+
+        /* ===================== BUTTONS ===================== */
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 14px;
+            font-size: 0.92rem;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            letter-spacing: 0.6px;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Shimmer effect on hover */
+        .btn::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+            transition: left 0.6s ease;
+        }
+
+        .btn:hover::after {
+            left: 100%;
+        }
+
+        .btn-start {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            color: #fff;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-start:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(102, 126, 234, 0.55);
+        }
+
+        .btn-pause {
+            background: linear-gradient(135deg, var(--accent-pink), var(--accent-red));
+            color: #fff;
+            box-shadow: 0 4px 20px rgba(245, 87, 108, 0.3);
+        }
+
+        .btn-pause:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(245, 87, 108, 0.5);
+        }
+
+        .btn-reset {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+        }
+
+        .btn-reset:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        /* ===================== STATUS TEXT ===================== */
+        .status-text {
+            font-size: 0.85rem;
+            color: var(--accent-pink);
+            font-weight: 500;
+            min-height: 1.4em;
+            text-align: center;
+            transition: color 0.4s ease;
+            letter-spacing: 0.5px;
+        }
+
+        .status-text.complete {
+            color: var(--accent-green);
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+
+        .status-text.error {
+            color: var(--accent-red);
+        }
+
+        /* ===================== COMPLETION MESSAGE ===================== */
+        .completion-msg {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--accent-green);
+            text-shadow: 0 0 20px rgba(74, 222, 128, 0.4);
+            animation: pulseGlow 2s ease-in-out infinite;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 1; }
+            50%      { opacity: 0.7; }
+        }
+
+        /* ===================== FOOTER ===================== */
+        .footer-note {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.25);
+            text-align: center;
+            letter-spacing: 1px;
+            margin-top: 8px;
+        }
+
+        /* ===================== RESPONSIVE — TABLET ===================== */
+        @media (max-width: 640px) {
+            .glass-card {
+                padding: 32px 24px 28px;
+                border-radius: 22px;
+            }
+
+            .app-title {
+                font-size: 1.5rem;
+            }
+
+            .clock-time {
+                font-size: 3.4rem;
+                letter-spacing: 3px;
+            }
+
+            .countdown-value {
+                font-size: 1.7rem;
+            }
+
+            .countdown-box {
+                min-width: 65px;
+                padding: 10px 8px 8px;
+            }
+
+            .countdown-label {
+                font-size: 0.55rem;
+                letter-spacing: 1.8px;
+            }
+
+            .input-field {
+                min-width: 160px;
+                font-size: 0.85rem;
+                padding: 9px 14px;
+            }
+
+            .btn {
+                padding: 10px 22px;
+                font-size: 0.82rem;
+            }
+
+            .input-row {
+                gap: 10px;
+            }
+
+            .countdown-grid {
+                gap: 12px;
+            }
+        }
+
+        /* ===================== RESPONSIVE — SMALL PHONE ===================== */
+        @media (max-width: 400px) {
+            .page-wrapper {
+                width: 98%;
+                padding: 10px;
+            }
+
+            .glass-card {
+                padding: 24px 18px 22px;
+                border-radius: 18px;
+            }
+
+            .app-title {
+                font-size: 1.25rem;
+            }
+
+            .clock-time {
+                font-size: 2.6rem;
+                letter-spacing: 2px;
+            }
+
+            .countdown-value {
+                font-size: 1.35rem;
+            }
+
+            .countdown-box {
+                min-width: 52px;
+                padding: 8px 6px 6px;
+            }
+
+            .countdown-label {
+                font-size: 0.5rem;
+            }
+
+            .input-field {
+                min-width: 140px;
+                font-size: 0.8rem;
+                padding: 7px 10px;
+            }
+
+            .btn {
+                padding: 8px 16px;
+                font-size: 0.78rem;
+                gap: 4px;
+            }
+
+            .countdown-grid {
+                gap: 8px;
+            }
+
+            .glass-card {
+                gap: 26px;
+            }
+        }
+
+        /* ===================== ACCESSIBILITY ===================== */
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ========== ANIMATED BACKGROUND ========== -->
+    <div class="bg-orbs" aria-hidden="true">
+        <div class="orb"></div>
+        <div class="orb"></div>
+        <div class="orb"></div>
+    </div>
+
+    <!-- ========== MAIN WRAPPER ========== -->
+    <div class="page-wrapper">
+        <div class="glass-card" role="main">
+
+            <!-- App Title -->
+            <h1 class="app-title">⏰ Digital Clock &amp; Countdown Timer</h1>
+
+            <!-- Current Date -->
+            <div class="date-display" id="dateDisplay" aria-live="polite"></div>
+
+            <!-- ==================== LIVE CLOCK ==================== -->
+            <section class="clock-section" aria-label="Live digital clock">
+                <div class="clock-time" id="clockDisplay" aria-label="Current time" role="timer">00:00:00</div>
+                <p class="clock-label">Current Local Time</p>
+            </section>
+
+            <div class="divider" aria-hidden="true"></div>
+
+            <!-- ==================== COUNTDOWN TIMER ==================== -->
+            <section class="countdown-section" aria-label="Countdown timer">
+                <p class="section-label">Countdown to an Event</p>
+
+                <!-- Date and Time Inputs -->
+                <div class="input-row">
+                    <div class="input-group">
+                        <label for="targetDate">Date</label>
+                        <input type="date" class="input-field" id="targetDate" aria-label="Target date">
+                    </div>
+                    <div class="input-group">
+                        <label for="targetTime">Time (optional)</label>
+                        <input type="time" class="input-field" id="targetTime" aria-label="Target time">
+                    </div>
+                </div>
+
+                <!-- Countdown Display -->
+                <div class="countdown-grid" id="countdownGrid" aria-live="polite">
+                    <div class="countdown-box">
+                        <div class="countdown-value" id="countdownDays">00</div>
+                        <div class="countdown-label">Days</div>
+                    </div>
+                    <div class="countdown-box">
+                        <div class="countdown-value" id="countdownHours">00</div>
+                        <div class="countdown-label">Hours</div>
+                    </div>
+                    <div class="countdown-box">
+                        <div class="countdown-value" id="countdownMinutes">00</div>
+                        <div class="countdown-label">Minutes</div>
+                    </div>
+                    <div class="countdown-box">
+                        <div class="countdown-value" id="countdownSeconds">00</div>
+                        <div class="countdown-label">Seconds</div>
+                    </div>
+                </div>
+
+                <!-- Control Buttons -->
+                <div class="btn-group">
+                    <button class="btn btn-start" id="btnStart" type="button">▶&thinsp;Start</button>
+                    <button class="btn btn-pause" id="btnPause" type="button" disabled>⏸&thinsp;Pause</button>
+                    <button class="btn btn-reset" id="btnReset" type="button" disabled>↺&thinsp;Reset</button>
+                </div>
+
+                <!-- Status Indicator -->
+                <div class="status-text" id="statusText" aria-live="polite"></div>
+            </section>
+
+            <p class="footer-note">Pure HTML · CSS · JavaScript — No frameworks</p>
+        </div>
+    </div>
+
+    <!-- ==================== JAVASCRIPT ==================== -->
+    <script>
+        (function () {
+            'use strict';
+
+            /* -------------------------------------------------- */
+            /*  DOM REFERENCES                                     */
+            /* -------------------------------------------------- */
+            var clockDisplay     = document.getElementById('clockDisplay');
+            var dateDisplay      = document.getElementById('dateDisplay');
+            var targetDateInput  = document.getElementById('targetDate');
+            var targetTimeInput  = document.getElementById('targetTime');
+            var countdownDays    = document.getElementById('countdownDays');
+            var countdownHours   = document.getElementById('countdownHours');
+            var countdownMinutes = document.getElementById('countdownMinutes');
+            var countdownSeconds = document.getElementById('countdownSeconds');
+            var btnStart         = document.getElementById('btnStart');
+            var btnPause         = document.getElementById('btnPause');
+            var btnReset         = document.getElementById('btnReset');
+            var statusTextEl     = document.getElementById('statusText');
+
+            /* -------------------------------------------------- */
+            /*  STATE                                              */
+            /* -------------------------------------------------- */
+            var countdownInterval  = null;
+            var isRunning = false;
+            var isPaused  = false;
+            var savedTimeRemaining = null; // ms remaining when paused
+
+            /* -------------------------------------------------- */
+            /*  LIVE CLOCK                                         */
+            /* -------------------------------------------------- */
+            function updateClock() {
+                var now = new Date();
+
+                var hh = padZero(now.getHours());
+                var mm = padZero(now.getMinutes());
+                var ss = padZero(now.getSeconds());
+
+                clockDisplay.innerHTML =
+                    hh + '<span class="colon">:</span>' +
+                    mm + '<span class="colon">:</span>' +
+                    ss;
+
+                var dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                dateDisplay.textContent = now.toLocaleDateString('en-US', dateOptions);
+            }
+
+            updateClock();
+            setInterval(updateClock, 1000);
+
+            /* -------------------------------------------------- */
+            /*  UTILITY                                            */
+            /* -------------------------------------------------- */
+            function padZero(num) {
+                return (num < 10 ? '0' : '') + num;
+            }
+
+            function setMinDateToday() {
+                var today = new Date();
+                var yyyy = today.getFullYear();
+                var mm   = padZero(today.getMonth() + 1);
+                var dd   = padZero(today.getDate());
+                targetDateInput.setAttribute('min', yyyy + '-' + mm + '-' + dd);
+            }
+            setMinDateToday();
+
+            /* -------------------------------------------------- */
+            /*  COUNTDOWN — PARSE TARGET                           */
+            /* -------------------------------------------------- */
+            function getTargetDateObj() {
+                var dateStr = targetDateInput.value;
+                var timeStr = targetTimeInput.value;
+
+                if (!dateStr) {
+                    showStatus('Please select a target date.', 'error');
+                    return null;
+                }
+
+                var parts   = dateStr.split('-');
+                var year    = parseInt(parts[0], 10);
+                var month   = parseInt(parts[1], 10) - 1;
+                var day     = parseInt(parts[2], 10);
+                var hours   = 0;
+                var minutes = 0;
+
+                if (timeStr) {
+                    var tParts = timeStr.split(':');
+                    hours   = parseInt(tParts[0], 10);
+                    minutes = parseInt(tParts[1], 10);
+                }
+
+                var target = new Date(year, month, day, hours, minutes, 0);
+
+                if (isNaN(target.getTime())) {
+                    showStatus('Invalid date entered. Please try again.', 'error');
+                    return null;
+                }
+
+                return target;
+            }
+
+            /* -------------------------------------------------- */
+            /*  COUNTDOWN — TICK                                   */
+            /* -------------------------------------------------- */
+            function tick() {
+                var target;
+
+                if (savedTimeRemaining !== null) {
+                    target = new Date(Date.now() + savedTimeRemaining);
+                } else {
+                    target = getTargetDateObj();
+                }
+
+                if (!target) {
+                    pauseCountdown();
+                    return;
+                }
+
+                var now     = new Date();
+                var diffMs  = target.getTime() - now.getTime();
+
+                if (diffMs <= 0) {
+                    countdownDays.textContent    = '00';
+                    countdownHours.textContent   = '00';
+                    countdownMinutes.textContent = '00';
+                    countdownSeconds.textContent = '00';
+                    showStatus('🎉 Countdown Complete!', 'complete');
+                    pauseCountdown();
+                    return;
+                }
+
+                savedTimeRemaining = diffMs;
+
+                var totalSec = Math.floor(diffMs / 1000);
+                var days     = Math.floor(totalSec / 86400);
+                var hours    = Math.floor((totalSec % 86400) / 3600);
+                var minutes  = Math.floor((totalSec % 3600) / 60);
+                var seconds  = totalSec % 60;
+
+                countdownDays.textContent    = padZero(days);
+                countdownHours.textContent   = padZero(hours);
+                countdownMinutes.textContent = padZero(minutes);
+                countdownSeconds.textContent = padZero(seconds);
+
+                var dateLabel = target.toLocaleDateString('en-US', {
+                    month: 'short', day: 'numeric', year: 'numeric'
+                });
+
+                if (targetTimeInput.value) {
+                    var timeLabel = target.toLocaleTimeString('en-US', {
+                        hour: '2-digit', minute: '2-digit'
+                    });
+                    showStatus('Counting down to ' + dateLabel + ' ' + timeLabel + ' …');
+                } else {
+                    showStatus('Counting down to ' + dateLabel + ' …');
+                }
+            }
+
+            /* -------------------------------------------------- */
+            /*  COUNTDOWN — START                                  */
+            /* -------------------------------------------------- */
+            function startCountdown() {
+                if (isPaused) {
+                    resumeCountdown();
+                    return;
+                }
+
+                var target = getTargetDateObj();
+                if (!target) return;
+
+                var now = new Date();
+                if (target.getTime() <= now.getTime()) {
+                    showStatus('Please choose a date/time in the future.', 'error');
+                    return;
+                }
+
+                isRunning = true;
+                isPaused  = false;
+                savedTimeRemaining = null;
+
+                targetDateInput.disabled = true;
+                targetTimeInput.disabled = true;
+
+                btnStart.disabled = true;
+                btnPause.disabled = false;
+                btnReset.disabled = false;
+
+                showStatus('Countdown started …');
+
+                tick();
+                countdownInterval = setInterval(tick, 1000);
+            }
+
+            /* -------------------------------------------------- */
+            /*  COUNTDOWN — PAUSE                                  */
+            /* -------------------------------------------------- */
+            function pauseCountdown() {
+                if (!isRunning || isPaused) return;
+
+                isPaused = true;
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+
+                btnStart.textContent = '▶ Resume';
+                btnStart.disabled   = false;
+                btnPause.disabled   = true;
+
+                showStatus('⏸ Paused');
+            }
+
+            /* -------------------------------------------------- */
+            /*  COUNTDOWN — RESUME                                 */
+            /* -------------------------------------------------- */
+            function resumeCountdown() {
+                if (!isRunning || !isPaused) return;
+
+                isPaused = false;
+                btnStart.textContent = '▶ Start';
+                btnStart.disabled   = true;
+                btnPause.disabled   = false;
+
+                showStatus('Countdown resumed …');
+
+                tick();
+                countdownInterval = setInterval(tick, 1000);
+            }
+
+            /* -------------------------------------------------- */
+            /*  COUNTDOWN — RESET                                  */
+            /* -------------------------------------------------- */
+            function resetCountdown() {
+                isRunning = false;
+                isPaused  = false;
+                savedTimeRemaining = null;
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+
+                countdownDays.textContent    = '00';
+                countdownHours.textContent   = '00';
+                countdownMinutes.textContent = '00';
+                countdownSeconds.textContent = '00';
+
+                targetDateInput.disabled = false;
+                targetTimeInput.disabled = false;
+                targetDateInput.value    = '';
+                targetTimeInput.value    = '';
+
+                btnStart.textContent = '▶ Start';
+                btnStart.disabled   = false;
+                btnPause.disabled   = true;
+                btnReset.disabled   = true;
+
+                showStatus('');
+            }
+
+            /* -------------------------------------------------- */
+            /*  STATUS HELPER                                      */
+            /* -------------------------------------------------- */
+            function showStatus(msg, type) {
+                statusTextEl.textContent = msg;
+                statusTextEl.classList.remove('complete', 'error');
+                if (type === 'complete') {
+                    statusTextEl.classList.add('complete');
+                } else if (type === 'error') {
+                    statusTextEl.classList.add('error');
+                }
+            }
+
+            /* -------------------------------------------------- */
+            /*  EVENT LISTENERS                                    */
+            /* -------------------------------------------------- */
+            btnStart.addEventListener('click', function () {
+                if (isPaused) {
+                    resumeCountdown();
+                } else {
+                    startCountdown();
+                }
+            });
+
+            btnPause.addEventListener('click', function () {
+                pauseCountdown();
+            });
+
+            btnReset.addEventListener('click', function () {
+                resetCountdown();
+            });
+
+        })();
+    </script>
+</body>
+</html>
