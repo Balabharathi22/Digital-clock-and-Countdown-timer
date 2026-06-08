@@ -633,8 +633,7 @@
 
                 <!-- Control Buttons -->
                 <div class="btn-group">
-                    <button class="btn btn-start" id="btnStart" type="button">▶&thinsp;Start</button>
-                    <button class="btn btn-pause" id="btnPause" type="button" disabled>⏸&thinsp;Pause</button>
+                    <button class="btn btn-start" id="btnDone" type="button">&thinsp;Start</button>
                     <button class="btn btn-reset" id="btnReset" type="button" disabled>↺&thinsp;Reset</button>
                 </div>
 
@@ -662,8 +661,7 @@
             var countdownHours   = document.getElementById('countdownHours');
             var countdownMinutes = document.getElementById('countdownMinutes');
             var countdownSeconds = document.getElementById('countdownSeconds');
-            var btnStart         = document.getElementById('btnStart');
-            var btnPause         = document.getElementById('btnPause');
+            var btnDone          = document.getElementById('btnDone');
             var btnReset         = document.getElementById('btnReset');
             var statusTextEl     = document.getElementById('statusText');
 
@@ -672,8 +670,6 @@
             /* -------------------------------------------------- */
             var countdownInterval  = null;
             var isRunning = false;
-            var isPaused  = false;
-            var savedTimeRemaining = null; // ms remaining when paused
 
             /* -------------------------------------------------- */
             /*  LIVE CLOCK                                         */
@@ -752,16 +748,10 @@
             /*  COUNTDOWN — TICK                                   */
             /* -------------------------------------------------- */
             function tick() {
-                var target;
-
-                if (savedTimeRemaining !== null) {
-                    target = new Date(Date.now() + savedTimeRemaining);
-                } else {
-                    target = getTargetDateObj();
-                }
+                var target = getTargetDateObj();
 
                 if (!target) {
-                    pauseCountdown();
+                    stopCountdown();
                     return;
                 }
 
@@ -774,11 +764,9 @@
                     countdownMinutes.textContent = '00';
                     countdownSeconds.textContent = '00';
                     showStatus('🎉 Countdown Complete!', 'complete');
-                    pauseCountdown();
+                    stopCountdown();
                     return;
                 }
-
-                savedTimeRemaining = diffMs;
 
                 var totalSec = Math.floor(diffMs / 1000);
                 var days     = Math.floor(totalSec / 86400);
@@ -809,11 +797,6 @@
             /*  COUNTDOWN — START                                  */
             /* -------------------------------------------------- */
             function startCountdown() {
-                if (isPaused) {
-                    resumeCountdown();
-                    return;
-                }
-
                 var target = getTargetDateObj();
                 if (!target) return;
 
@@ -824,14 +807,11 @@
                 }
 
                 isRunning = true;
-                isPaused  = false;
-                savedTimeRemaining = null;
 
                 targetDateInput.disabled = true;
                 targetTimeInput.disabled = true;
 
-                btnStart.disabled = true;
-                btnPause.disabled = false;
+                btnDone.disabled = true;
                 btnReset.disabled = false;
 
                 showStatus('Countdown started …');
@@ -841,37 +821,17 @@
             }
 
             /* -------------------------------------------------- */
-            /*  COUNTDOWN — PAUSE                                  */
+            /*  COUNTDOWN — STOP                                   */
             /* -------------------------------------------------- */
-            function pauseCountdown() {
-                if (!isRunning || isPaused) return;
+            function stopCountdown() {
+                if (!isRunning) return;
 
-                isPaused = true;
+                isRunning = false;
                 clearInterval(countdownInterval);
                 countdownInterval = null;
 
-                btnStart.textContent = '▶ Resume';
-                btnStart.disabled   = false;
-                btnPause.disabled   = true;
-
-                showStatus('⏸ Paused');
-            }
-
-            /* -------------------------------------------------- */
-            /*  COUNTDOWN — RESUME                                 */
-            /* -------------------------------------------------- */
-            function resumeCountdown() {
-                if (!isRunning || !isPaused) return;
-
-                isPaused = false;
-                btnStart.textContent = '▶ Start';
-                btnStart.disabled   = true;
-                btnPause.disabled   = false;
-
-                showStatus('Countdown resumed …');
-
-                tick();
-                countdownInterval = setInterval(tick, 1000);
+                btnDone.disabled = false;
+                btnReset.disabled = false;
             }
 
             /* -------------------------------------------------- */
@@ -879,8 +839,6 @@
             /* -------------------------------------------------- */
             function resetCountdown() {
                 isRunning = false;
-                isPaused  = false;
-                savedTimeRemaining = null;
                 clearInterval(countdownInterval);
                 countdownInterval = null;
 
@@ -894,10 +852,8 @@
                 targetDateInput.value    = '';
                 targetTimeInput.value    = '';
 
-                btnStart.textContent = '▶ Start';
-                btnStart.disabled   = false;
-                btnPause.disabled   = true;
-                btnReset.disabled   = true;
+                btnDone.disabled = false;
+                btnReset.disabled = true;
 
                 showStatus('');
             }
@@ -918,16 +874,8 @@
             /* -------------------------------------------------- */
             /*  EVENT LISTENERS                                    */
             /* -------------------------------------------------- */
-            btnStart.addEventListener('click', function () {
-                if (isPaused) {
-                    resumeCountdown();
-                } else {
-                    startCountdown();
-                }
-            });
-
-            btnPause.addEventListener('click', function () {
-                pauseCountdown();
+            btnDone.addEventListener('click', function () {
+                startCountdown();
             });
 
             btnReset.addEventListener('click', function () {
